@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://arinutpam.in/sitemap.xml
+Sitemap: https://arinutpam.ai/sitemap.xml
