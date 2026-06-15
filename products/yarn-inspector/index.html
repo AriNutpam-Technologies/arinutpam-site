@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yarn Inspector — AI Visual Inspection for Yarn Cones | AriNutpam</title>
+<meta name="description" content="Yarn Inspector by AriNutpam: GPU-accelerated AI visual quality inspection for yarn cones. 3 cameras, 6 views, white + UV light, full inspection in under 5 seconds. Integrates with your PLC line.">
+<!-- Draft / colleague review — keep out of search until launch. Remove to make public. -->
+<meta name="robots" content="noindex, nofollow">
+
+<meta property="og:title" content="Yarn Inspector — AI Visual Inspection for Yarn Cones">
+<meta property="og:description" content="Every cone, every defect, in under 5 seconds. GPU-accelerated machine vision that inspects tip, tail, surface and UV defects and writes pass/fail straight back to your PLC.">
+<meta property="og:type" content="website">
+
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#070a10; --bg2:#0b111c; --panel:#0e1524; --panel2:#111a2b;
+  --ink:#eef2f7; --muted:#8a94a6; --faint:#5a6577;
+  --green:#10b981; --green-br:#34d399; --purple:#8b5cf6; --purple-br:#a78bfa;
+  --ng:#f59e0b; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+  --display:'Archivo',sans-serif; --body:'IBM Plex Sans',sans-serif; --mono:'JetBrains Mono',monospace;
+  --maxw:1200px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--body);
+  line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+/* atmospheric background */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2; pointer-events:none;
+  background:
+    radial-gradient(60vw 60vw at 78% -8%, rgba(139,92,246,.16), transparent 60%),
+    radial-gradient(55vw 50vw at 8% 10%, rgba(16,185,129,.14), transparent 60%),
+    var(--bg);
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.5;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,#000 30%,transparent 80%);
+          mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,#000 30%,transparent 80%);
+}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+.mono{font-family:var(--mono)}
+.tag{
+  font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--green-br);display:inline-flex;align-items:center;gap:8px;
+}
+.tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:1.04;letter-spacing:-.01em}
+.btn{
+  font-family:var(--mono);font-size:13px;letter-spacing:.04em;font-weight:500;
+  display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:2px;
+  border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer;
+  transition:.22s ease;text-transform:uppercase;
+}
+.btn:hover{border-color:var(--green);color:var(--green-br);transform:translateY(-2px)}
+.btn--primary{background:var(--green);color:#04130d;border-color:var(--green);font-weight:700}
+.btn--primary:hover{background:var(--green-br);color:#04130d;box-shadow:0 10px 34px -10px rgba(16,185,129,.6)}
+
+/* ============ NAV ============ */
+.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);
+  background:rgba(7,10,16,.72);border-bottom:1px solid var(--line)}
+.nav__in{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{height:22px;width:auto}
+.brand__div{width:1px;height:20px;background:var(--line2)}
+.brand__prod{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.02em}
+.brand__prod b{color:var(--green-br)}
+.nav__links{display:flex;align-items:center;gap:30px}
+.nav__links a{font-family:var(--mono);font-size:12.5px;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;transition:.18s}
+.nav__links a:hover{color:var(--ink)}
+.nav__cta{display:flex;align-items:center;gap:14px}
+.burger{display:none;background:none;border:1px solid var(--line2);color:var(--ink);width:40px;height:38px;border-radius:2px;cursor:pointer;font-size:16px}
+
+/* ============ HERO ============ */
+.hero{position:relative;padding:78px 0 70px}
+.hero__grid{display:grid;grid-template-columns:1.05fr .95fr;gap:54px;align-items:center}
+.hero h1{font-size:clamp(40px,5.6vw,74px);font-weight:900;text-transform:uppercase;letter-spacing:-.02em}
+.hero h1 .g{color:var(--green-br)}
+.hero h1 .p{
+  background:linear-gradient(100deg,var(--purple-br),var(--green-br));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero__lead{color:var(--muted);font-size:18px;max-width:34ch;margin:22px 0 30px}
+.hero__cta{display:flex;gap:14px;flex-wrap:wrap}
+.hero__meta{margin-top:30px;display:flex;gap:8px 26px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--faint)}
+.hero__meta b{color:var(--muted);font-weight:500}
+
+/* inspection viewport visual */
+.scope{position:relative;aspect-ratio:1/1;border:1px solid var(--line2);border-radius:4px;
+  background:radial-gradient(120% 120% at 50% 0%,#0f1726,#070b12);overflow:hidden;
+  box-shadow:0 40px 90px -40px rgba(0,0,0,.8), inset 0 0 0 1px rgba(255,255,255,.02)}
+.scope__hud{position:absolute;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  color:var(--faint);text-transform:uppercase;z-index:4}
+.scope__hud.tl{top:12px;left:14px}.scope__hud.tr{top:12px;right:14px;color:var(--green-br)}
+.scope__hud.bl{bottom:12px;left:14px}.scope__hud.br{bottom:12px;right:14px;color:var(--purple-br)}
+.recticle::before,.recticle::after{content:"";position:absolute;width:18px;height:18px;border:2px solid var(--line2);z-index:4}
+.recticle.c1::before{top:8px;left:8px;border-right:0;border-bottom:0}
+.recticle.c2::after{top:8px;right:8px;border-left:0;border-bottom:0}
+.recticle.c3::before{bottom:8px;left:8px;border-right:0;border-top:0}
+.recticle.c4::after{bottom:8px;right:8px;border-left:0;border-top:0}
+.cone{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54%;height:74%;z-index:2}
+.scanline{position:absolute;left:0;right:0;height:2px;z-index:3;
+  background:linear-gradient(90deg,transparent,var(--green-br),transparent);
+  box-shadow:0 0 16px 2px rgba(52,211,153,.5);animation:scan 4.2s cubic-bezier(.5,0,.5,1) infinite}
+@keyframes scan{0%,100%{top:8%;opacity:0}10%{opacity:1}50%{top:92%;opacity:1}60%,100%{opacity:0}}
+/* detection boxes */
+.det{position:absolute;z-index:5;border:1.5px solid var(--green);border-radius:1px;
+  opacity:0;animation:pop .5s ease forwards}
+.det b{position:absolute;top:-19px;left:-1.5px;font-family:var(--mono);font-size:9.5px;font-weight:700;
+  letter-spacing:.05em;background:var(--green);color:#04130d;padding:1px 6px;white-space:nowrap}
+.det.ng{border-color:var(--ng)} .det.ng b{background:var(--ng);color:#1c1203}
+.det .corner{position:absolute;width:7px;height:7px;border:1.5px solid #fff;opacity:.85}
+.det .corner.a{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.det .corner.b{bottom:-1px;right:-1px;border-left:0;border-top:0}
+@keyframes pop{0%{opacity:0;transform:scale(.82)}60%{opacity:1;transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
+.d1{top:14%;left:30%;width:40%;height:15%;animation-delay:.6s}
+.d2{top:40%;left:24%;width:52%;height:24%;animation-delay:1.1s}
+.d3{top:70%;left:33%;width:34%;height:16%;animation-delay:1.7s}
+
+/* load reveal */
+.lr{opacity:0;transform:translateY(18px);animation:lr .7s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes lr{to{opacity:1;transform:none}}
+.lr.d1{animation-delay:.05s}.lr.d2{animation-delay:.15s}.lr.d3{animation-delay:.25s}
+.lr.d4{animation-delay:.35s}.lr.d5{animation-delay:.45s}
+
+/* ============ STAT BAR ============ */
+.stats{border-block:1px solid var(--line);background:rgba(11,17,28,.5)}
+.stats__in{display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:30px 24px;border-left:1px solid var(--line);position:relative}
+.stat:first-child{border-left:0}
+.stat__n{font-family:var(--display);font-weight:900;font-size:clamp(30px,4vw,46px);line-height:1;
+  background:linear-gradient(160deg,#fff,var(--green-br));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat__l{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+
+/* ============ SECTION SHELL ============ */
+section{position:relative}
+.sec{padding:96px 0}
+.sec__head{max-width:680px;margin-bottom:54px}
+.sec__head h2{font-size:clamp(30px,3.8vw,46px);text-transform:uppercase;margin:16px 0 0}
+.sec__head p{color:var(--muted);font-size:17px;margin-top:18px}
+
+/* problem strip */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.split__panel{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel),var(--bg2));
+  border-radius:4px;padding:30px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.kpi{border:1px solid var(--line);border-radius:3px;padding:18px;background:rgba(255,255,255,.015)}
+.kpi__l{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.kpi__v{font-family:var(--display);font-weight:800;font-size:30px;margin-top:6px}
+.kpi__v.ok{color:var(--green-br)} .kpi__v.warn{color:var(--ng)} .kpi__v.pp{color:var(--purple-br)}
+.kpi__bar{height:5px;border-radius:4px;margin-top:12px;background:rgba(255,255,255,.07);overflow:hidden}
+.kpi__bar i{display:block;height:100%;border-radius:4px}
+.lead-list{list-style:none;margin-top:24px;display:grid;gap:14px}
+.lead-list li{display:flex;gap:13px;color:var(--muted);font-size:15.5px}
+.lead-list svg{flex:none;margin-top:3px}
+
+/* capabilities */
+.caps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.cap{position:relative;border:1px solid var(--line);border-radius:4px;padding:26px 24px 28px;
+  background:linear-gradient(180deg,var(--panel),var(--bg2));transition:.25s ease;overflow:hidden}
+.cap::before{content:"";position:absolute;inset:0;border-radius:4px;pointer-events:none;
+  background:radial-gradient(120% 80% at 100% 0,rgba(139,92,246,.10),transparent 55%);opacity:0;transition:.25s}
+.cap:hover{transform:translateY(-4px);border-color:var(--line2)}
+.cap:hover::before{opacity:1}
+.cap__ico{width:44px;height:44px;border:1px solid var(--line2);border-radius:3px;display:grid;place-items:center;
+  color:var(--green-br);margin-bottom:18px}
+.cap h3{font-size:18px;text-transform:uppercase;letter-spacing:0}
+.cap p{color:var(--muted);font-size:14.5px;margin-top:10px}
+.cap__t{position:absolute;top:18px;right:18px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint)}
+
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;counter-reset:step}
+.step{position:relative;border:1px solid var(--line);border-radius:4px;padding:24px 18px;background:var(--panel);counter-increment:step}
+.step::before{content:"0" counter(step);font-family:var(--mono);font-size:11px;color:var(--green-br);letter-spacing:.1em}
+.step::after{content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--faint);z-index:2;font-family:var(--mono)}
+.step:last-child::after{display:none}
+.step h3{font-size:15px;text-transform:uppercase;margin:14px 0 8px;letter-spacing:0}
+.step p{color:var(--muted);font-size:13.5px}
+.step__cam{font-family:var(--mono);font-size:10.5px;color:var(--purple-br);letter-spacing:.06em;margin-top:12px}
+
+/* dashboard showcase */
+.dash{border:1px solid var(--line2);border-radius:6px;overflow:hidden;
+  background:linear-gradient(180deg,var(--panel2),var(--bg2));box-shadow:0 50px 100px -50px rgba(0,0,0,.8)}
+.dash__bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.25)}
+.dot{width:11px;height:11px;border-radius:50%}
+.dash__bar .mono{margin-left:14px;font-size:11.5px;color:var(--faint);letter-spacing:.08em}
+.dash__body{padding:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.dcard{border:1px solid var(--line);border-radius:4px;padding:16px;background:rgba(255,255,255,.015)}
+.dcard__l{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.dcard__v{font-family:var(--display);font-weight:800;font-size:27px;margin-top:8px}
+.dash__chart{grid-column:span 2;border:1px solid var(--line);border-radius:4px;padding:18px;background:rgba(255,255,255,.015)}
+.bars{display:flex;align-items:flex-end;gap:10px;height:120px;margin-top:16px}
+.bars span{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--green-br),rgba(16,185,129,.25));position:relative}
+.bars span.p{background:linear-gradient(180deg,var(--purple-br),rgba(139,92,246,.25))}
+.donut{grid-column:span 2;border:1px solid var(--line);border-radius:4px;padding:18px;background:rgba(255,255,255,.015);
+  display:flex;align-items:center;gap:20px}
+.donut__ring{width:96px;height:96px;border-radius:50%;flex:none;
+  background:conic-gradient(var(--green) 0 86%,var(--ng) 86% 95%,var(--purple) 95% 100%);
+  -webkit-mask:radial-gradient(circle 30px at 50% 50%,transparent 98%,#000);
+          mask:radial-gradient(circle 30px at 50% 50%,transparent 98%,#000);}
+.legend{font-family:var(--mono);font-size:11.5px;display:grid;gap:8px;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px}
+
+/* specs */
+.specs{display:grid;grid-template-columns:repeat(2,1fr);gap:0 48px;border-top:1px solid var(--line)}
+.spec{display:flex;justify-content:space-between;gap:20px;padding:18px 0;border-bottom:1px solid var(--line)}
+.spec__k{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.spec__v{font-size:15px;text-align:right;color:var(--ink)}
+
+/* CTA */
+.cta{position:relative;border:1px solid var(--line2);border-radius:6px;overflow:hidden;
+  padding:60px 40px;text-align:center;background:linear-gradient(160deg,var(--panel2),var(--bg2))}
+.cta::before{content:"";position:absolute;inset:0;opacity:.5;pointer-events:none;
+  background:radial-gradient(60% 120% at 50% -20%,rgba(16,185,129,.25),transparent 60%)}
+.cta h2{position:relative;font-size:clamp(30px,4vw,52px);text-transform:uppercase}
+.cta p{position:relative;color:var(--muted);font-size:18px;margin:18px auto 30px;max-width:52ch}
+.cta__row{position:relative;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;align-items:center}
+.cta__row .mono{color:var(--muted);font-size:13px}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:40px 0;margin-top:90px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.foot .mono{font-size:12px;color:var(--faint);letter-spacing:.05em}
+.foot a.mono:hover{color:var(--green-br)}
+
+/* reveal on scroll */
+[data-reveal]{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+[data-reveal].in{opacity:1;transform:none}
+
+@media(max-width:920px){
+  .hero__grid,.split{grid-template-columns:1fr;gap:40px}
+  .scope{max-width:440px;margin:0 auto;width:100%}
+  .caps{grid-template-columns:1fr 1fr}
+  .pipe{grid-template-columns:1fr 1fr}
+  .step::after{display:none}
+  .stats__in{grid-template-columns:1fr 1fr}
+  .stat:nth-child(3){border-left:0}
+  .dash__body{grid-template-columns:1fr 1fr}
+  .specs{grid-template-columns:1fr}
+  .nav__links{display:none}
+  .burger{display:inline-block}
+}
+@media(max-width:560px){
+  .caps{grid-template-columns:1fr}
+  .dash__body{grid-template-columns:1fr}
+  .dash__chart,.donut{grid-column:span 1}
+  .stats__in{grid-template-columns:1fr 1fr}
+}
+/* mobile menu */
+.mmenu{display:none;border-bottom:1px solid var(--line);background:rgba(7,10,16,.96)}
+.mmenu.open{display:block}
+.mmenu a{display:block;padding:14px 24px;font-family:var(--mono);font-size:13px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;border-top:1px solid var(--line)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="wrap nav__in">
+    <a class="brand" href="/">
+      <img src="/assets/arinutpam-logo-v18.svg" alt="AriNutpam">
+      <span class="brand__div"></span>
+      <span class="brand__prod">Yarn<b>Inspector</b></span>
+    </a>
+    <nav class="nav__links">
+      <a href="#capabilities">Capabilities</a>
+      <a href="#how">How it works</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#specs">Specs</a>
+    </nav>
+    <div class="nav__cta">
+      <a class="btn btn--primary" href="#contact">Request a demo</a>
+      <button class="burger" id="burger" aria-label="Menu">≡</button>
+    </div>
+  </div>
+  <div class="mmenu" id="mmenu">
+    <a href="#capabilities">Capabilities</a>
+    <a href="#how">How it works</a>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#specs">Specs</a>
+    <a href="#contact">Request a demo</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div>
+      <span class="tag lr d1">Machine Vision · Textile QC</span>
+      <h1 class="lr d2">Every cone.<br><span class="g">Every defect.</span><br><span class="p">Under 5 seconds.</span></h1>
+      <p class="hero__lead lr d3">Yarn Inspector is a GPU-accelerated AI vision system that inspects every yarn cone on your line — tip, tail, surface and UV defects — and writes the verdict straight back to your PLC.</p>
+      <div class="hero__cta lr d4">
+        <a class="btn btn--primary" href="#contact">Request a demo →</a>
+        <a class="btn" href="#how">See how it works</a>
+      </div>
+      <div class="hero__meta lr d5">
+        <span><b>3</b> cameras</span>
+        <span><b>6</b> views · white + UV</span>
+        <span><b>YOLOv8</b> on NVIDIA Triton</span>
+        <span><b>PLC</b> write-back</span>
+      </div>
+    </div>
+
+    <!-- inspection viewport -->
+    <div class="scope lr d3 recticle c1 c2 c3 c4" aria-hidden="true">
+      <span class="scope__hud tl">CAM 02 · UV</span>
+      <span class="scope__hud tr">● LIVE</span>
+      <span class="scope__hud bl">CYCLE 4.21s</span>
+      <span class="scope__hud br">YIELD 99.2%</span>
+
+      <!-- yarn cone -->
+      <svg class="cone" viewBox="0 0 200 280" fill="none">
+        <defs>
+          <linearGradient id="yarn" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#efe9da"/><stop offset="1" stop-color="#cdc4ad"/>
+          </linearGradient>
+        </defs>
+        <path d="M86 8 L114 8 L150 250 Q100 268 50 250 Z" fill="url(#yarn)"/>
+        <ellipse cx="100" cy="251" rx="50" ry="13" fill="#b8ae93"/>
+        <rect x="92" y="2" width="16" height="14" rx="2" fill="#7d8696"/>
+        <g stroke="#b3a786" stroke-width="1" opacity=".55">
+          <path d="M70 60 L130 92"/><path d="M66 92 L134 60" />
+          <path d="M60 130 L140 170"/><path d="M56 170 L144 130"/>
+          <path d="M52 200 L148 232"/><path d="M52 232 L148 200"/>
+        </g>
+      </svg>
+
+      <div class="scanline"></div>
+      <div class="det d1"><span class="corner a"></span><span class="corner b"></span><b>TIP · PATTERN OK</b></div>
+      <div class="det d2"><span class="corner a"></span><span class="corner b"></span><b>SURFACE · OK</b></div>
+      <div class="det d3 ng"><span class="corner a"></span><span class="corner b"></span><b>CUT-END · NG</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- STAT BAR -->
+<div class="stats">
+  <div class="wrap stats__in">
+    <div class="stat"><div class="stat__n"><span data-count="100" data-suffix="%">0</span></div><div class="stat__l">Cones inspected</div></div>
+    <div class="stat"><div class="stat__n">&lt;<span data-count="5" data-suffix="s">0</span></div><div class="stat__l">Full cycle time</div></div>
+    <div class="stat"><div class="stat__n"><span data-count="18" data-suffix="">0</span></div><div class="stat__l">Tip patterns ID'd</div></div>
+    <div class="stat"><div class="stat__n"><span data-count="99" data-suffix="%+">0</span></div><div class="stat__l">Line uptime</div></div>
+  </div>
+</div>
+
+<!-- PROBLEM / VALUE -->
+<section class="sec">
+  <div class="wrap split">
+    <div data-reveal>
+      <span class="tag">The problem with sampling</span>
+      <h2 style="font-size:clamp(28px,3.6vw,44px);text-transform:uppercase;margin-top:16px">Manual checks miss what the eye can't catch</h2>
+      <ul class="lead-list">
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Inspect <b style="color:var(--ink)">100% of production</b>, not a hand-picked sample.</li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Catch UV-only contamination invisible under white light.</li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Consistent grading — no fatigue, no shift-to-shift drift.</li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Full traceability: every cone logged, searchable, auditable.</li>
+      </ul>
+    </div>
+    <div class="split__panel" data-reveal>
+      <div style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:16px">Shift snapshot · live</div>
+      <div class="kpis">
+        <div class="kpi"><div class="kpi__l">Yield</div><div class="kpi__v ok">99.2%</div><div class="kpi__bar"><i style="width:99%;background:var(--green)"></i></div></div>
+        <div class="kpi"><div class="kpi__l">Cycles</div><div class="kpi__v">12,480</div><div class="kpi__bar"><i style="width:78%;background:var(--purple)"></i></div></div>
+        <div class="kpi"><div class="kpi__l">Failures</div><div class="kpi__v warn">98</div><div class="kpi__bar"><i style="width:14%;background:var(--ng)"></i></div></div>
+        <div class="kpi"><div class="kpi__l">Top defect</div><div class="kpi__v pp" style="font-size:19px;padding-top:8px">Cut-End</div><div class="kpi__bar"><i style="width:46%;background:var(--purple-br)"></i></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAPABILITIES -->
+<section class="sec" id="capabilities" style="padding-top:40px">
+  <div class="wrap">
+    <div class="sec__head" data-reveal>
+      <span class="tag">What it sees</span>
+      <h2>Six inspections.<br>One pass of the cone.</h2>
+      <p>Three cameras capture the tip, tail, front and rear under both white and UV light. A specialised AI model scores each view independently.</p>
+    </div>
+    <div class="caps">
+      <div class="cap" data-reveal><span class="cap__t">T1 · CAM1</span><div class="cap__ico">◎</div><h3>Tip Pattern ID</h3><p>Classifies the wound tip across up to 18 pattern types, flagging the wrong colour or winding scheme.</p></div>
+      <div class="cap" data-reveal><span class="cap__t">T2 · CAM1</span><div class="cap__ico">▣</div><h3>Tail Inspection</h3><p>Binary OK/NG grading of the cone tail for malformed or defective windings.</p></div>
+      <div class="cap" data-reveal><span class="cap__t">T3 · CAM2</span><div class="cap__ico">✂</div><h3>Cut-End Detection</h3><p>Spots loose, cut or protruding ends on the front face before they reach packing.</p></div>
+      <div class="cap" data-reveal><span class="cap__t">T3 · CAM2</span><div class="cap__ico">✿</div><h3>Flower-Nose Detection</h3><p>Identifies the flower-nose forming defect on the front of the package.</p></div>
+      <div class="cap" data-reveal><span class="cap__t">T5 · CAM3</span><div class="cap__ico">▦</div><h3>Surface Defects</h3><p>Front and rear surface grading for soiling, damage and winding irregularities.</p></div>
+      <div class="cap" data-reveal><span class="cap__t">T4·T6 · UV</span><div class="cap__ico">☀</div><h3>UV Inspection</h3><p>Dedicated UV-light models surface contamination and oil marks invisible under white light.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="sec" id="how">
+  <div class="wrap">
+    <div class="sec__head" data-reveal>
+      <span class="tag">From trigger to verdict</span>
+      <h2>A closed loop with your line</h2>
+      <p>Yarn Inspector drops into your existing PLC and conveyor. No cloud, no internet exposure — it runs on-prem on your production network.</p>
+    </div>
+    <div class="pipe">
+      <div class="step" data-reveal><h3>PLC Trigger</h3><p>The line signals a cone in position over Modbus TCP, with its carrier ID.</p><div class="step__cam">MODBUS · T1–T6</div></div>
+      <div class="step" data-reveal><h3>Multi-View Capture</h3><p>Three cameras snap tip, tail, front and rear under white and UV light.</p><div class="step__cam">3 CAM · 6 VIEWS</div></div>
+      <div class="step" data-reveal><h3>GPU Inference</h3><p>TensorRT-optimised YOLOv8 models score each view on an NVIDIA Triton server.</p><div class="step__cam">YOLOv8 · TRITON</div></div>
+      <div class="step" data-reveal><h3>PLC Write-Back</h3><p>Pass/fail per view is written back to the carrier register — the line accepts or rejects.</p><div class="step__cam">RESULT · &lt;5s</div></div>
+      <div class="step" data-reveal><h3>Log & Analyse</h3><p>Every result is stored, charted and reportable — per cone, per shift.</p><div class="step__cam">SQLITE · BI</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD -->
+<section class="sec" id="dashboard">
+  <div class="wrap">
+    <div class="sec__head" data-reveal>
+      <span class="tag">Operator + analytics</span>
+      <h2>See the line. Then see the trend.</h2>
+      <p>A live operator view shows every detection as it happens. Admins get KPIs, defect breakdowns, per-shift analytics and one-click branded PDF reports.</p>
+    </div>
+    <div class="dash" data-reveal>
+      <div class="dash__bar">
+        <span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span>
+        <span class="mono">yarn-inspector · analytics · shift A</span>
+      </div>
+      <div class="dash__body">
+        <div class="dcard"><div class="dcard__l">Total Cycles</div><div class="dcard__v">12,480</div></div>
+        <div class="dcard"><div class="dcard__l">Yield</div><div class="dcard__v" style="color:var(--green-br)">99.21%</div></div>
+        <div class="dcard"><div class="dcard__l">Failures</div><div class="dcard__v" style="color:var(--ng)">98</div></div>
+        <div class="dcard"><div class="dcard__l">Top Defect</div><div class="dcard__v" style="color:var(--purple-br);font-size:20px;padding-top:6px">Cut-End</div></div>
+
+        <div class="dash__chart">
+          <div class="dcard__l">Failures per camera · last 8 shifts</div>
+          <div class="bars">
+            <span style="height:40%"></span><span style="height:62%" class="p"></span><span style="height:30%"></span>
+            <span style="height:78%" class="p"></span><span style="height:52%"></span><span style="height:44%" class="p"></span>
+            <span style="height:66%"></span><span style="height:35%" class="p"></span>
+          </div>
+        </div>
+        <div class="donut">
+          <div class="donut__ring"></div>
+          <div class="legend">
+            <div><i style="background:var(--green)"></i>OK · 86%</div>
+            <div><i style="background:var(--ng)"></i>NG defect · 9%</div>
+            <div><i style="background:var(--purple)"></i>No-read / fault · 5%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caps" style="margin-top:18px">
+      <div class="cap" data-reveal><div class="cap__ico">⌕</div><h3>Full Traceability</h3><p>Every inspection — per carrier, per view — logged with timestamp, image and detection JSON.</p></div>
+      <div class="cap" data-reveal><div class="cap__ico">⌗</div><h3>Filter & Export</h3><p>Slice by date, camera, view, defect, status or shift. Export to CSV, TXT or branded PDF.</p></div>
+      <div class="cap" data-reveal><div class="cap__ico">⧉</div><h3>Role-Based Access</h3><p>Operator dashboards, admin analytics and super-admin configuration, each behind its own role.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPECS -->
+<section class="sec" id="specs">
+  <div class="wrap">
+    <div class="sec__head" data-reveal>
+      <span class="tag">At a glance</span>
+      <h2>Built for the factory floor</h2>
+    </div>
+    <div class="specs" data-reveal>
+      <div class="spec"><span class="spec__k">Cameras</span><span class="spec__v">3 × GigE / USB3 Vision</span></div>
+      <div class="spec"><span class="spec__k">Lighting</span><span class="spec__v">White + UV, sequenced</span></div>
+      <div class="spec"><span class="spec__k">AI Models</span><span class="spec__v">YOLOv8 · TensorRT</span></div>
+      <div class="spec"><span class="spec__k">Inference</span><span class="spec__v">NVIDIA Triton (GPU)</span></div>
+      <div class="spec"><span class="spec__k">Line Interface</span><span class="spec__v">Modbus TCP · PLC</span></div>
+      <div class="spec"><span class="spec__k">Orchestration</span><span class="spec__v">LabVIEW host</span></div>
+      <div class="spec"><span class="spec__k">Cycle Time</span><span class="spec__v">&lt; 5 s · 6 views</span></div>
+      <div class="spec"><span class="spec__k">Availability</span><span class="spec__v">≥ 99% uptime</span></div>
+      <div class="spec"><span class="spec__k">Data Store</span><span class="spec__v">SQLite · shift-aware</span></div>
+      <div class="spec"><span class="spec__k">Deployment</span><span class="spec__v">On-prem · air-gapped</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="sec" id="contact" style="padding-top:0">
+  <div class="wrap">
+    <div class="cta" data-reveal>
+      <h2>Put Yarn Inspector on your line</h2>
+      <p>Book a walkthrough with our engineers and we'll map it to your cones, your defects and your PLC.</p>
+      <div class="cta__row">
+        <a class="btn btn--primary" href="https://arinutpam.ai/#contact">Request a demo →</a>
+        <span class="mono">or call <b style="color:var(--green-br)">+91&nbsp;97905&nbsp;17374</b></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap foot">
+    <div class="brand">
+      <img src="/assets/arinutpam-logo-v18.svg" alt="AriNutpam" style="height:20px">
+      <span class="brand__div"></span>
+      <span class="mono">Yarn Inspector</span>
+    </div>
+    <div class="mono">A product of AriNutpam · Arinutpam Private Limited</div>
+    <div class="mono">© <span id="yr">2026</span> · <a class="mono" href="https://arinutpam.ai">arinutpam.ai</a></div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // year
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  // mobile menu
+  var burger = document.getElementById('burger'), mmenu = document.getElementById('mmenu');
+  burger.addEventListener('click', function(){ mmenu.classList.toggle('open'); });
+  mmenu.addEventListener('click', function(e){ if(e.target.tagName==='A') mmenu.classList.remove('open'); });
+
+  // scroll reveal
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, {threshold:.14});
+  document.querySelectorAll('[data-reveal]').forEach(function(el){ io.observe(el); });
+
+  // count-up stats
+  function run(el){
+    var target = parseFloat(el.getAttribute('data-count')),
+        suffix = el.getAttribute('data-suffix') || '', t0 = null, dur = 1300;
+    function tick(ts){
+      if(!t0) t0 = ts; var p = Math.min((ts-t0)/dur, 1);
+      var val = Math.round((0.5 - Math.cos(p*Math.PI)/2) * target);
+      el.textContent = val + suffix;
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  var sio = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){ if(en.isIntersecting){ run(en.target); sio.unobserve(en.target); } });
+  }, {threshold:.6});
+  document.querySelectorAll('[data-count]').forEach(function(el){ sio.observe(el); });
+})();
+</script>
+</body>
+</html>
